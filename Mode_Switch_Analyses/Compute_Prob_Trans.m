@@ -57,14 +57,21 @@ function [P_trans, P_class, D_time] = Compute_Prob_Trans(classes, frames, IM_num
     end
     
     P_trans = zeros(C,C);
-    %calculate 
-    for p1=1:C
-        for p2=1:C
-            P_trans(p1,p2) = length(time_trans{p1,p2}) / mean(time_trans{p1,p2},'omitnan');
+    for p1 = 1:C
+        for p2 = 1:C
+            P_trans(p1,p2) = sum(1./time_trans{p1,p2}) / sum(1./[time_trans{p1,:}]);
         end
     end
-    %now, make each row sum to one.
-    P_trans = P_trans ./ sum(P_trans,2,'omitnan');
+    %     %not correct, necessarily.
+    %     %calculate 
+    %     for p1=1:C
+    %         for p2=1:C
+    %             P_trans(p1,p2) = length(time_trans{p1,p2}) / mean(time_trans{p1,p2},'omitnan');
+    %         end
+    %     end
+    %     %now, make each row sum to one.
+    %     P_trans = P_trans ./ sum(P_trans,2,'omitnan');
+    
     %the rate here is probability per frame (prob per 15 minutes).
     
     %class probabilities
