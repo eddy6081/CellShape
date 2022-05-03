@@ -100,9 +100,9 @@ class PCA_Shape_Analysis(object):
 		 						ex_ConA=False, ex_EqD=False, ex_Sol=False, ex_Ext=False,
 								ex_Per=False,ex_conPer=False,ex_FL=False,ex_InR=False,
 								ex_bleb=False)
-		return X_data, cellnumbers, Times
+		return X_data, cellnumbers, Times, locs
 
-	def reduce_training(self, X_data, cellnums, frames, max_samples=15000):
+	def reduce_training(self, X_data, cellnums, frames, locs, max_samples=15000):
 		"""
 		INPUTS
 		------------------------------------
@@ -111,6 +111,8 @@ class PCA_Shape_Analysis(object):
 		cellnums: 1D numpy float array, shape n_instances
 
 		frames: 1D numpy float array, shape n_instances
+
+		locs: 2D numpy float array, shape n_instances x 2
 
 		max_samples: integer, specifies the maximum first dimension size of X_data
 
@@ -128,14 +130,18 @@ class PCA_Shape_Analysis(object):
 			the reduced from of frames, corresponding to the same rows taken
 			from X_data
 
+		locs: 2D numpy float array, shape min(n_instances, max_samples) x 2
+			the reduced from of locs, corresponding to the same rows taken
+			from X_data
+
 		"""
 		if X_data.shape[0]>max_samples:
 			#randomly select 15,000 indeces without replacement.
 			inds = np.random.choice(list(range(X_data.shape[0])), max_samples, replace=False)
-			return X_data[inds,:], cellnums[inds], frames[inds]
+			return X_data[inds,:], cellnums[inds], frames[inds], locs[inds,:]
 		else:
 			print("data has {} examples, smaller than the given 'max_samples' of {}".format(X_data.shape[0],max_samples))
-			return X_data, cellnums, frames
+			return X_data, cellnums, frames, locs
 
 	def scaler_train(self, X_data):
 		"""
@@ -282,8 +288,8 @@ class PCA_Shape_Analysis(object):
 			print("dimensionality of PCA data is not correct.")
 
 
-	def save_data_to_mat(self, data_PCA, fpath):
-		scipy.io.savemat(fpath, dict(data = data_PCA))
+	def save_data_to_mat(self, data_PCA, cellnums, locs, frames, fpath):
+		scipy.io.savemat(fpath, dict(data = data_PCA, frames = frames, locs = locs, cellnums = cellnums))
 
 	def help(self):
 		print("The order you should process your data is as follows: \n")
@@ -299,12 +305,12 @@ class PCA_Shape_Analysis(object):
 		print("test_data_pca = P.PCA_transform(test_data_scaled, PCA_vecs)")
 
 P = PCA_Shape_Analysis()
-train_data, train_cnums, train_frames = P.import_data(fpath = '/users/czeddy/documents/WorkingFolder/All_Combined.csv')
-train_data, train_cnums, train_frames = P.reduce_training(train_data, train_cnums, train_frames, 15000)
+train_data, train_cnums, train_frames, train_locs = P.import_data(fpath = '/users/czeddy/documents/WorkingFolder/All_Combined.csv')
+train_data, train_cnums, train_frames, train_locs = P.reduce_training(train_data, train_cnums, train_frames, train_locs, 15000)
 mu, std = P.scaler_train(train_data)
 train_data_scaled = P.apply_scaler(train_data, mu, std)
 PCA_vecs = P.PCA_fit(train_data_scaled)
 train_data_pca = P.PCA_transform(train_data_scaled, PCA_vecs)
-test_data, test_cnums, test_frames = P.import_data(fpath = '/users/czeddy/documents/WorkingFolder/25R_15D_021720/25R_15D_021720_edited.csv')
+test_data, test_cnums, test_frames, test_locs = P.import_data(fpath = '/users/czeddy/documents/WorkingFolder/25R_15D_021720/25R_15D_021720_edited.csv')
 test_data_scaled = P.apply_scaler(test_data, mu, std)
 test_data_pca = P.PCA_transform(test_data_scaled, PCA_vecs)
