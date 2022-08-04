@@ -36,9 +36,13 @@ function Make_Theta_Plots(theta_steps)
             subplot(size(theta_steps,1),size(theta_steps,2),count)
             h=histogram(theta_steps{p1,p2},'BinWidth',pi/10);
             xlim([-pi,pi])
-            title(ttls_transition{p1,p2})
-            xlabel(sprintf('$\theta$ between %s',ttls_transition{p1,p2}))
-            ylabel('counts')
+            %title(ttls_transition{p1,p2})
+            %xlabel(sprintf('$\theta$ between %s',ttls_transition{p1,p2}))
+            %ylabel('counts')
+            set(gca, 'XTick',-pi:pi:pi,'XTickLabel',{'-\pi','0','\pi'},'LineWidth',2)
+            %h.LineWidth=2;
+            
         end
     end
+    
 end

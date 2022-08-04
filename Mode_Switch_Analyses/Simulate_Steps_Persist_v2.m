@@ -2,6 +2,17 @@ function [PosX_dyn, PosY_dyn, PosX_stat, PosY_stat]=Simulate_Steps_Persist_v2(P_
     %{
     Purpose: This simulation works by defining an initial persistence
     direction that remains constant during the entire trajectory. 
+    In context of simulation, this makes sense. We draw from the ecdf of
+    the theta distribution in order to quantify steps taken away from the
+    persistent direction. 
+    Realistically, we would like the persistent direction to be able to
+    change. In the data, we draw the persistent direction from knowledge
+    about "future" number of data points and "past" number of data points
+    in SVD. In simulation, there is no way to draw from future points. 
+    
+    Notes: 
+    Perhaps, the thing to do is to also make a "future" theta
+    distribution. That would allow us to draw from it.
     %}
     %% Simulate a persistent (random walk with two states)
     %simulate N cells, length L trajectories

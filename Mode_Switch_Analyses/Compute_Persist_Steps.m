@@ -59,13 +59,6 @@ function [Persist_Steps, Deflect_Steps, Persist_AMME_Steps, Deflect_AMME_Steps]=
                     diffx = locsx{i}(c+ind) - locsx{i}(c);
                     diffy = locsy{i}(c+ind) - locsy{i}(c);
                     dp = dot([diffx,diffy],[p_vec{i}(c,1), p_vec{i}(c,2)]); %/ norm([diffx,diffy]); %this is normalized....
-                    if isnan(dp)
-                        dp = 0;
-                    end 
-                    %%%% If the persistent vector is not yet defined, we
-                    %%%% can't say how persistent or non-persistent the
-                    %%%% step was. Therefore, this shouldn't get included
-                    %%%% in the cell arrays. 
                     if ~isinf(dp)
                         Persist_Steps{classes{i}(c),classes{i}(c+ind)}(end+1) = dp;
                         Persist_AMME_Steps{classes_AMME(c), classes_AMME(c+ind)}(end+1) = dp;
@@ -73,9 +66,6 @@ function [Persist_Steps, Deflect_Steps, Persist_AMME_Steps, Deflect_AMME_Steps]=
                     cp = cross([diffx,diffy,0],[p_vec{i}(c,1), p_vec{i}(c,2),0]); %clockwise is positive
                     %this should be the same as (but opposite sign) 
                     np = dot([diffx,diffy],[p_vec{i}(c,3), p_vec{i}(c,4)]);% / norm([diffx,diffy]); %counter clockwise is positive
-                    if isnan(cp)
-                        cp = [0,0,0];
-                    end 
                     if ~isinf(cp)
                         Deflect_Steps{classes{i}(c),classes{i}(c+ind)}(end+1) = cp(3);
                         Deflect_AMME_Steps{classes_AMME(c), classes_AMME(c+ind)}(end+1) = cp(3);

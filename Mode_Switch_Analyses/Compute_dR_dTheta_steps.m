@@ -50,6 +50,9 @@ function [dR_steps, dTheta_steps] = Compute_dR_dTheta_steps(Persist_Steps, Defle
             %dTheta_steps{p1,p2}(isnan(dTheta_steps{p1,p2})) = []; %simply delete. %this is the case 
             %where the persistence and deflection are both zero, so there is no
             %theta step. 
+            %get rid of any that are nan 
+            dR_steps{p1,p2}(isnan(dR_steps{p1,p2}))=[];
+            dTheta_steps{p1,p2}(isnan(dTheta_steps{p1,p2}))=[];
         end
     end
 end

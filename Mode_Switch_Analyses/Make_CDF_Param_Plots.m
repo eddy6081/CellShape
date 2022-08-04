@@ -41,14 +41,34 @@ function Make_CDF_Param_Plots(dR_params,dR_params_error,dR_params_useful,softmax
     ttls_transition={'AM-AM','AM-ME','AM-IM';...
                      'ME-AM','ME-ME','ME-IM';...
                      'IM-AM','IM-ME','IM-IM'};
-
+                 
+    %{
+    We would like to plot the data so that we have dwell first, then
+    transitions. That means, we need to reshape the parameters
+    %}
+    if ~softmax
+        inds = [1,4,7;9,3,6;5,2,8];
+    else
+        inds = [1,4,7;5,2,8;9,3,6];
+    end
+    ttls_transition = ttls_transition(inds);
+    dR_params_useful=dR_params_useful(inds);
+    for ch=1:size(dR_params,3)
+        dR_params(:,:,ch)=dR_params(inds+((ch-1)*9));
+    end
+    for ch=1:size(dR_params_error,3)
+        dR_params_error(:,:,ch)=dR_params_error(inds+((ch-1)*9));
+    end
+    
     %%%%%%%%%%SIGMA%%%%%%%%%%%%%
     figure
     %colors
     if softmax
-        bar_colors = {[0,1,0],[0,.6,0.6],[.93,.5,.93],[1,0,0]}; %am-am, am-me, me-me, me-am
+        bar_colors = {[0,1,0],[0,.6,0.6],[1,0,0],[.93,.5,.93]}; %am-am, am-me, me-me, me-am
     else
-        bar_colors = {[0,1,0], [0,.6,0.6], [0,1,0.5], [.93,.5,.93],  [1,0,0], [0.5,0.5,0.5], [0,0.58,1], [.415,1,0], [0,1,1]}; 
+        bar_colors = {[0,1,0], [0,.6,.6], [0, .6, .6],[0,1,1],[0,0.58,1],[0,0.58,1], [1,0,0],[.5,.5,.5],[.5,.5,.5]};
+        %bar_colors = {[0,1,0], [0,.6,.6], [0, .6, .6], [.5,.5,.5],[1,0,0],[.5,.5,.5],[0,0.58,1],[0,0.58,1],[0,1,1]};
+        %bar_colors = {[0,1,0], [0,.6,0.6], [0,1,0.5], [.93,.5,.93],  [1,0,0], [0.5,0.5,0.5], [0,0.58,1], [.415,1,0], [0,1,1]}; 
         %              %am-am,   am-me,     am-im,       me-am        me-me,      me-im,        im-am,      im-me,    im-im
     end
 
