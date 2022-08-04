@@ -11,7 +11,18 @@ training was done without proper micrometer units.
 from __future__ import division
 import numpy as np
 from sklearn import svm, preprocessing, decomposition, linear_model
-from sklearn.externals import joblib
+"""
+If the following import fails, or your SVM model cannot be loaded from joblib,
+likely the model was saved using an older version of scikit-learn. In order to
+make it forward compatible, we need to resave it with the new joblib library.
+I recommend you uninstall your version of scikit-learn, and install correctly
+pip install Scikit-learn==0.20.4
+"""
+import joblib
+try:
+	import sklearn.externals.joblib as extjoblib
+except:
+	pass
 from transform_data import *
 from inspect import currentframe, getframeinfo
 
@@ -30,8 +41,14 @@ class Cell_SVM(object):
 		#add whatever variables we need
 
 	def load_model(self,model_pkl_path, scaler_pkl_path):
-		self.clf = joblib.load(model_pkl_path)
-		self.scaler = joblib.load(scaler_pkl_path)
+		try:
+			self.clf = joblib.load(model_pkl_path)
+		except:
+			self.clf = extjoblib.load(model_pkl_path)
+		try:
+			self.scaler = joblib.load(scaler_pkl_path)
+		except:
+			self.scaler = extjoblib.load(scaler_pkl_path)
 
 	def set_scale(self, scale):
 		self.pixel2dist=scale
@@ -76,46 +93,32 @@ class Cell_SVM(object):
 		# I WILL NEED TO ONLY DO CELLS IN MATLAB WITH GREATER THAN 20 FRAMES
 		#################################################################
 
-		#uniquecellnumbers, cellcounts = np.unique(cellnumbers, return_counts = True)
-
-		#Good_cellnumbers = uniquecellnumbers[cellcounts>=20]
-
-		#to_delete = []
-		#for i in range(len(cellnumbers)):
-		#	if cellnumbers[i] not in Good_cellnumbers:
-		#		to_delete.append(i)
-
-		#data = np.delete(data, to_delete, axis = 0)
-
-		#Times = np.delete(Times, to_delete)
-
-		#cellnumbers = np.delete(cellnumbers, to_delete)
 
 		data = np.delete(data, [0,1], axis = 1) #delete time column and cellnumber column, since we already have them.
 
 
 		print('Data is being converted to correct micrometers, assuming measured in pixels')
 		#scale columns by following
-		data[:,0] =data[:,0]*pixel2dist*pixel2dist#area
-		data[:,1] = data[:,1]*pixel2dist#majoraxislength
-		data[:,2] = data[:,2]*pixel2dist#minoraxislength
+		data[:,0] =data[:,0]*self.pixel2dist*self.pixel2dist#area
+		data[:,1] = data[:,1]*self.pixel2dist#majoraxislength
+		data[:,2] = data[:,2]*self.pixel2dist#minoraxislength
 		#3 is eccentricity, unitless
-		data[:,4] =data[:,4]*pixel2dist*pixel2dist#4 convex area,
-		data[:,5] = data[:,5]*pixel2dist#5 Equiv diam
+		data[:,4] =data[:,4]*self.pixel2dist*self.pixel2dist#4 convex area,
+		data[:,5] = data[:,5]*self.pixel2dist#5 Equiv diam
 		#6 solidity, unitless
 		#7 extent, unitless
-		data[:,8] = data[:,8]*pixel2dist#8 Perimeter
-		data[:,9] = data[:,9]*pixel2dist#8 Convex Perimeter
-		data[:,10] = data[:,10]*pixel2dist#8 Fiber Length
-		data[:,11] = data[:,11]*pixel2dist#8 Max Inscribed Radius
-		data[:,12] = data[:,12]*pixel2dist# Bleb_length
+		data[:,8] = data[:,8]*self.pixel2dist#8 Perimeter
+		data[:,9] = data[:,9]*self.pixel2dist#8 Convex Perimeter
+		data[:,10] = data[:,10]*self.pixel2dist#8 Fiber Length
+		data[:,11] = data[:,11]*self.pixel2dist#8 Max Inscribed Radius
+		data[:,12] = data[:,12]*self.pixel2dist# Bleb_length
 
 
 		#add form factor as last column of data?
 		#Form factor is added inside the Processing data when doing SVM. See "Transform_data.py"
 
-		if len(Measure_Delete)>0:
-			data = np.delete(data, Measure_Delete, axis = 1) #delete time column and cellnumber column, since we already have them.
+		#if len(Measure_Delete)>0:
+		#	data = np.delete(data, Measure_Delete, axis = 1) #delete time column and cellnumber column, since we already have them.
 
 		#so now data should look just like other data used in SVM
 
@@ -141,15 +144,15 @@ class Cell_SVM(object):
 			X_data_exp = poly.fit_transform(X_data)
 
 			#FIRST, SCALE THE DATA USING THE SCALER
-			X_data_scaled = scaler.transform(X_data_exp)
+			X_data_scaled = self.scaler.transform(X_data_exp)
 		else:
-			X_data_scaled = scaler.transform(X_data)
+			X_data_scaled = self.scaler.transform(X_data)
 
 		#GATHER PROBABILITIES
-		Probs = clf.predict_proba(X_data_scaled)
+		Probs = self.clf.predict_proba(X_data_scaled)
 
 		#Gather Predictions
-		Predictions = clf.predict(X_data_scaled)
+		Predictions = self.clf.predict(X_data_scaled)
 
 		#write to file
 		#frames, cell numbers, Probs
@@ -173,12 +176,55 @@ class Cell_SVM(object):
 			np.savetxt(File, output)
 			File.close()
 
+	def eval_confusion_matrix(self, d = 1):#, thresh = 0.6):
+		from sklearn.metrics import confusion_matrix
+		#you should have already ran _load_train_data and load_model
+		if not hasattr(self,'clf'):
+			print("You must run load_model before this.")
+			return
+		if not hasattr(self,'X_train'):
+			print("You must run _load_train_data before running this.")
+			return
+		#expand dataset, if appropriate
+		X_data = self.X_train
+		if d==2:
+			print("Expanding feature set to include quadratic, cross terms.")
+			poly=preprocessing.PolynomialFeatures(degree = d, interaction_only = True)
+			X_data_exp = poly.fit_transform(X_data)
+
+			#FIRST, SCALE THE DATA USING THE SCALER
+			X_data_scaled = self.scaler.transform(X_data_exp)
+		else:
+			X_data_scaled = self.scaler.transform(X_data)
+		#scale the data
+
+		Probs = self.clf.predict_proba(X_data_scaled)
+		#max_probs = np.max(Probs,axis=1)
+		Pred = np.argmax(Probs,axis=1)
+		#IM_num = int(np.max(self.Y_train)+1)
+		#for pred_i in range(len(Pred)):
+		#	if max_probs[pred_i]<thresh:
+		#		Pred[pred_i]=IM_num
+
+		CM = confusion_matrix(self.Y_train,Pred) #tn, fp, fn, tp
+		s = np.sum(CM,axis=1)
+		CM = CM / s[:,None] #normalize matrix by rows
+		#where max of Probs<0.6
+		return CM
+
+	def save_confusion_matrix(self, CM, model_pkl_path):
+		import os
+		fname=os.path.basename(model_pkl_path)
+		fname=os.path.join(os.path.dirname(model_pkl_path), fname[0:fname.rfind(".")]+"_confusion_matrix.csv")
+		np.savetxt(fname, CM, delimiter = ",")
+
+
 	def _load_train_data(self, training_path):
 		"""
 		training_path: path to training txt file, produced by Matlab code
 		"""
 		#import features
-		print "Importing the training set..."
+		print("Importing the training set...")
 		featurelist=[]
 
 		with open(training_path,'r') as infile:
@@ -235,7 +281,7 @@ class Cell_SVM(object):
 		########################################################################
 		########################################################################
 
-		print 'Importing the dev set...'
+		print('Importing the dev set...')
 
 		#import features
 		featurelist=[]
@@ -283,6 +329,16 @@ class Cell_SVM(object):
 		self.X_dev = X_dev
 		self.Y_dev = y_dev
 
+	def predict_dev_set(self):
+		X_dev_scaled = self.scaler.transform(self.X_dev)
+		Predictions = self.clf.predict(X_dev_scaled)
+		return Predictions
+
+	def predict_train_set(self):
+		X_train_scaled = self.scaler.transform(self.X_train)
+		Predictions = self.clf.predict(X_train_scaled)
+		return Predictions
+
 	def train(self, training_path, dev_path, d = 1, C=1000, gamma = 0.01):
 		"""
 		Encapsulates CellShape_SVM_CrossTerms.py
@@ -308,8 +364,8 @@ class Cell_SVM(object):
 		self._load_train_data(training_path)
 		#load test set data
 		self._load_dev_set_data(dev_path)
-		print "Data is now in the same form as that found in Iris Dataset"
-		print "Splitting the training dataset into train/val"
+		print("Data is now in the same form as that found in Iris Dataset")
+		print("Splitting the training dataset into train/val")
 
 		############### SPLITTING THE DATASET ##################
 		#First split the dataset so it is as if we only had a training set then a eval set.
@@ -320,7 +376,7 @@ class Cell_SVM(object):
 
 		#################INCREASING FEATURES####################
 		if d==2:
-			print "Increasing dimensionality of dataset using cross terms"
+			print("Increasing dimensionality of dataset using cross terms")
 			poly=preprocessing.PolynomialFeatures(degree = d, interaction_only = True)
 			##IN SOME MODELS with 2 polynomial features, we are getting 90% exactly. In some polynomial 3 models,
 			# we are getting 90.83%, which is exactly even with deep learning models.
@@ -348,7 +404,7 @@ class Cell_SVM(object):
 		########################################################
 
 
-		print "Scaling the data"
+		print("Scaling the data")
 		################# SCALE THE DATA #######################
 		#Scale the data. Each attribute in the dataset must be independently scaled, that is
 		# 0 mean, and unit variance. Doing this returns the z-scores of the data
@@ -360,7 +416,7 @@ class Cell_SVM(object):
 
 		X_train_scaled = scaler.transform(X_train)
 
-		X_test_scaled = self.scaler.transform(X_test) # will be used later to evaluate the performance.
+		X_test_scaled = scaler.transform(X_test) # will be used later to evaluate the performance.
 
 		X_dev_scaled = scaler.transform(self.X_dev)
 
@@ -378,7 +434,7 @@ class Cell_SVM(object):
 
 		#http://scikit-learn.org/stable/auto_examples/svm/plot_iris.html
 
-		print "Training the models"
+		print("Training the models")
 
 		# we create an instance of SVM and fit out data.
 		#if we wanted to plot the support vectors, We do not scale our
@@ -418,10 +474,10 @@ class Cell_SVM(object):
 		DevScores = [clf.score(X_dev_scaled,self.y_dev) for clf in models]
 		ps = [clf.predict(X_dev_scaled) for clf in models]
 
-		print 'Results are as follows: '
-		print 'Self Scores = ', SelfScores
-		print 'Validation Scores = ', ValScores
-		print 'Dev Set Scores = ', DevScores
+		print('Results are as follows: ')
+		print('Self Scores = ', SelfScores)
+		print('Validation Scores = ', ValScores)
+		print('Dev Set Scores = ', DevScores)
 
 		#Write performance into txt file
 
@@ -470,17 +526,41 @@ class Cell_SVM(object):
 		joblib.dump(model, model_name+'.pkl')
 		joblib.dump(scaler,scaler_name+'.pkl')
 
-		print "Saved model and scaler to current working directory as:"
+		print("Saved model and scaler to current working directory as:")
 		print("   "+model_name+'.pkl')
 		print("   "+scaler_name+'.pkl')
 
 
 	#Still need to add GridSearch and Closer GridSearch
-	
+
 
 
 #for load model
-model_pkl_path = "/users/czeddy/documents/svm/SVC_rbf_010820_16942.pkl"
-scaler_pkl_path = "/users/czeddy/documents/svm/SVC_rbf_scaler_010820_16942.pkl"
+model_pkl_path = "/users/czeddy/documents/workingfolder/svm/SVC_rbf_010820_16942.pkl"
+scaler_pkl_path = "/users/czeddy/documents/workingfolder/svm/SVC_rbf_scaler_010820_16942.pkl"
 #test data
-data_path = '/users/czeddy/documents/workingfolder/Drug_Treated/BEST_CELLS/New/Control/cell9/cell9'
+#data_path = '/users/czeddy/documents/workingfolder/Drug_Treated/BEST_CELLS/New/Control/cell9/cell9'
+trainingpath='/users/czeddy/documents/WorkingFolder/SVM_training/Training_Stuff/Models/Shear_Rotate_6/real_sim_data_augmented/All_Combined.txt'
+devpath='/users/czeddy/documents/WorkingFolder/svm/Dev_Set_041821.txt'
+data_path = '/users/czeddy/documents/workingfolder/Deep_Learning_test/cellpose/my_code/results/submit_20210919T204912/results'#'/users/czeddy/documents/workingfolder/SYTO/Cells/Cell1/Cell1'
+
+CV=Cell_SVM()
+CV.set_scale(scale = .53763672)#0.656265)
+CV.load_model(model_pkl_path,scaler_pkl_path)
+CV.load_test_data(data_path)
+#CV._load_train_data(trainingpath)
+#CV._load_dev_set_data(devpath)
+#SVM_dev_preds = CV.predict_dev_set()
+#SVM_train_preds = CV.predict_train_set()
+
+#CM = CV.eval_confusion_matrix(d=1)
+#CV.save_confusion_matrix(CM, model_pkl_path)
+#
+#load random forest preds
+# import pickle
+#
+# with open('RFC_CellShape.pkl', 'rb') as f:
+#     data = pickle.load(f)
+#
+# RF_dev_preds = data[0]
+# RF_train_preds = data[1]
