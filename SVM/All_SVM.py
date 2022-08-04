@@ -54,6 +54,7 @@ class Cell_SVM(object):
 		self.pixel2dist=scale
 		#pixel2dist=0.53763672 #microns/pixel using 20x oil objective lens on confocal
 		#pixel2dist=0.656265 #using 20x oil lens, microns/pixel on dark room microscope
+		#pixel2dist=1.075268 #using 10x air objective on the confocal
 
 	def load_test_data(self, data_path, d = 1, write_txt = True):
 		"""
@@ -172,7 +173,7 @@ class Cell_SVM(object):
 			thefile.write("\n")
 			thefile.close()
 
-			File = file(data_path+'.txt','a')
+			File = open(data_path+'.txt','a')
 			np.savetxt(File, output)
 			File.close()
 
@@ -536,16 +537,16 @@ class Cell_SVM(object):
 
 
 #for load model
-model_pkl_path = "/users/czeddy/documents/workingfolder/svm/SVC_rbf_010820_16942.pkl"
-scaler_pkl_path = "/users/czeddy/documents/workingfolder/svm/SVC_rbf_scaler_010820_16942.pkl"
+model_pkl_path = "/Volumes/sharedfolder/Chris/Mode-Switching/svm/SVC_rbf_010820_16942_new.pkl"
+scaler_pkl_path = "/Volumes/sharedfolder/Chris/Mode-Switching/svm/SVC_rbf_scaler_010820_16942_new.pkl"
 #test data
 #data_path = '/users/czeddy/documents/workingfolder/Drug_Treated/BEST_CELLS/New/Control/cell9/cell9'
-trainingpath='/users/czeddy/documents/WorkingFolder/SVM_training/Training_Stuff/Models/Shear_Rotate_6/real_sim_data_augmented/All_Combined.txt'
-devpath='/users/czeddy/documents/WorkingFolder/svm/Dev_Set_041821.txt'
-data_path = '/users/czeddy/documents/workingfolder/Deep_Learning_test/cellpose/my_code/results/submit_20210919T204912/results'#'/users/czeddy/documents/workingfolder/SYTO/Cells/Cell1/Cell1'
+trainingpath='/Volumes/sharedfolder/Chris/Mode-Switching/svm/SVM_training/Training_Stuff/Models/Shear_Rotate_6/real_sim_data_augmented/All_Combined.txt'
+devpath='/Volumes/sharedfolder/Chris/Mode-Switching/svm/Dev_Set_041821.txt'
+data_path = '/Users/austinnaylor/Documents/CellPose/results/submit_20220803T135645/submit_20220803T135645'#'/users/czeddy/documents/workingfolder/SYTO/Cells/Cell1/Cell1'
 
 CV=Cell_SVM()
-CV.set_scale(scale = .53763672)#0.656265)
+CV.set_scale(scale = 1.075268)#0.656265)
 CV.load_model(model_pkl_path,scaler_pkl_path)
 CV.load_test_data(data_path)
 #CV._load_train_data(trainingpath)
